@@ -1,10 +1,7 @@
 GO=go
 
 .PHONY: all
-all:
-	make apiserver
-	make agent
-	make humcli
+all: apiserver agent humcli
 
 apiserver:
 	$(GO) build -o bin/apiserver cmd/apiserver/main.go
