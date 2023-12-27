@@ -382,10 +382,9 @@ func (a *VirtualMachineAgent) powerOnVirtualMachine(
 
 		nics = append(nics,
 			"-device",
-			fmt.Sprintf("virtio-net,netdev=netdev-%s,driver=virtio-net-pci,mac=%s,mq=on,rx_queue_size=1024,tx_queue_size=1024,vectors=%d",
+			fmt.Sprintf("virtio-net,netdev=netdev-%s,driver=virtio-net-pci,mac=%s",
 				net.Annotations["nodenetworkv0/bridge_name"],
 				nic.MacAddress,
-				vcpusInt*2+2,
 			),
 			"-netdev",
 			fmt.Sprintf("tap,script=no,downscript=no,id=netdev-%s,vhost=on,ifname=%s,queues=%d",
