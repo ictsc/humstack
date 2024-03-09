@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"os/exec"
 	"path/filepath"
 
 	"github.com/ceph/go-ceph/rbd"
@@ -61,13 +60,6 @@ func (a *ImageAgent) syncLocalImageEntityFromBlockStorage(imageEntity *system.Im
 
 	var src io.Reader
 	size := int64(0)
-  	destPath := filepath.Join(a.localImageDirectory, imageEntity.Group, imageEntity.ID)
-  	destDirPath := filepath.Dir(destPath)
-  
-  	if err := os.MkdirAll(destDirPath, 0755); err != nil {
-  		return err
-  	}
-
 	if t, ok := bs.Annotations["blockstoragev0/type"]; ok && t == "Ceph" {
 		imageName, ok := bs.Annotations["ceph-image-name"]
 		if !ok {
@@ -132,37 +124,47 @@ func (a *ImageAgent) syncLocalImageEntityFromBlockStorage(imageEntity *system.Im
 			}
 			size = int64(sum)
 		}
-		
-	   	dest, err := os.Create(destPath)
-	   	if err != nil {
-	   		return err
-	   	}
-	   	defer dest.Close()
-	   
-	   	if _, err := io.CopyN(dest, src, size); err != nil {
-	   		return errors.Wrapf(err, "copy image from source bs")
-	   	}
-	   
-	   	hasher := sha256.New()
-	   	if _, err := dest.Seek(0, 0); err != nil {
-	   		return errors.Wrap(err, "seek dest file cursor")
-	   	}
-	   
-	   	if _, err := io.Copy(hasher, dest); err != nil {
-	   		return err
-	   	}
-
-	   	imageEntity.Spec.Hash = fmt.Sprintf("sha256:%x", hasher.Sum(nil))
-
 	} else {
 		srcPath := filepath.Join(a.localBlockStorageDirectory, bs.Group, bs.Namespace, bs.ID)
-		cmd := exec.Command("qemu-img", "create", "-f", "qcow2", "-b", fmt.Sprintf("%s", srcPath), "-F", "qcow2", fmt.Sprintf("%s", destPath))
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-		if err := cmd.Run(); err != nil {
+		s, err := os.Open(srcPath)
+		if err != nil {
 			return err
 		}
+		defer s.Close()
+		src = s
+		if finfo, err := s.Stat(); err != nil {
+			return err
+		} else {
+			size = finfo.Size()
+		}
 	}
+	destPath := filepath.Join(a.localImageDirectory, imageEntity.Group, imageEntity.ID)
+	destDirPath := filepath.Dir(destPath)
+
+	if err := os.MkdirAll(destDirPath, 0755); err != nil {
+		return err
+	}
+
+	dest, err := os.Create(destPath)
+	if err != nil {
+		return err
+	}
+	defer dest.Close()
+
+	if _, err := io.CopyN(dest, src, size); err != nil {
+		return errors.Wrapf(err, "copy image from source bs")
+	}
+
+	hasher := sha256.New()
+	if _, err := dest.Seek(0, 0); err != nil {
+		return errors.Wrap(err, "seek dest file cursor")
+	}
+
+	if _, err := io.Copy(hasher, dest); err != nil {
+		return err
+	}
+
+	imageEntity.Spec.Hash = fmt.Sprintf("sha256:%x", hasher.Sum(nil))
 
 	if imageEntity.Annotations == nil {
 		imageEntity.Annotations = map[string]string{}
