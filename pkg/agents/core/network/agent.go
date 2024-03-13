@@ -120,6 +120,9 @@ func (a *NetworkAgent) syncNetwork(net *core.Network) error {
 			nodeNet, ok := nodeNetMap[getNodeNetworkID(net.ID, node.ID)]
 			if !ok {
 				log.Println("already deleted")
+				if err := a.client.CoreV0().Network().Delete(net.Group, net.Namespace, net.ID); err != nil {
+					return errors.Wrap(err, "delete network")
+				}
 				continue
 			}
 
