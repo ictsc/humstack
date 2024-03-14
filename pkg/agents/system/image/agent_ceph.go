@@ -46,7 +46,7 @@ func (a *ImageAgent) syncCephImageEntityFromImage(imageEntity *system.ImageEntit
 			imageEntity.Spec.Source.ImageTag,
 		)
 		if err != nil {
-			return err
+			return errors.Wrap(err, fmt.Sprintf("Failed to fetch local image %s %s", imageEntity.Spec.Source.ImageName, imageEntity.Spec.Source.ImageTag))
 		}
 		defer stream.Close()
 
@@ -67,16 +67,16 @@ func (a *ImageAgent) syncCephImageEntityFromImage(imageEntity *system.ImageEntit
 
 		image, err = rbd.Create(ioctx, imageName, uint64(size), 22)
 		if err != nil {
-			return err
+			return errors.Wrap(err, fmt.Sprintf("Failed to init rbd %s", imageName))
 		}
 
 		if err := image.Open(); err != nil {
-			return err
+			return errors.Wrap(err, fmt.Sprintf("Failed to open rbd %s", imageName))
 		}
 		defer image.Close()
 
 		if _, err := io.CopyN(image, stream, int64(size)); err != nil {
-			return err
+			return errors.Wrap(err, fmt.Sprintf("Failed to upload image to rbd %s", imageName))
 		}
 	}
 
