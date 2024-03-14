@@ -47,13 +47,13 @@ func (a *BlockStorageAgent) syncCephBlockStorage(bs *system.BlockStorage) error 
 				conn, err := a.newCephConn()
 				if err != nil {
 
-					return err
+					return errors.Wrap(err, "Failed to newCephConn() ")
 				}
 				defer conn.Shutdown()
 
 				ioctx, err := conn.OpenIOContext(a.config.CephBackend.PoolName)
 				if err != nil {
-					return err
+					return errors.Wrap(err, "Failed to open ceph pool ")
 				}
 				defer ioctx.Destroy()
 
@@ -69,7 +69,7 @@ func (a *BlockStorageAgent) syncCephBlockStorage(bs *system.BlockStorage) error 
 			// 良くなさそう
 			bs.Status.State = system.BlockStorageStateActive
 			if _, err := a.client.SystemV0().BlockStorage().Update(bs); err != nil {
-				return err
+				return errors.Wrap(err, "Failed to update bs ")
 			}
 			return setHash(bs)
 		case system.BlockStorageStateActive, system.BlockStorageStateUsed:
@@ -85,7 +85,7 @@ func (a *BlockStorageAgent) syncCephBlockStorage(bs *system.BlockStorage) error 
 				bs.Annotations["ceph-pool-name"] = a.config.CephBackend.PoolName
 				bs.Annotations["ceph-image-name"] = imageNameWithGroupAndNS
 				if _, err := a.client.SystemV0().BlockStorage().Update(bs); err != nil {
-					return err
+					return errors.Wrap(err, "Failed to update bs ")
 				}
 			}
 			return nil
@@ -99,7 +99,7 @@ func (a *BlockStorageAgent) syncCephBlockStorage(bs *system.BlockStorage) error 
 	bs.Annotations["ceph-pool-name"] = a.config.CephBackend.PoolName
 	bs.Annotations["ceph-image-name"] = imageNameWithGroupAndNS
 	if _, err := a.client.SystemV0().BlockStorage().Update(bs); err != nil {
-		return err
+		return errors.Wrap(err, "Failed to update bs ")
 	}
 
 	switch bs.Spec.From.Type {
@@ -239,7 +239,7 @@ func (a *BlockStorageAgent) syncCephBlockStorage(bs *system.BlockStorage) error 
 			if err := a.setStateError(bs); err != nil {
 				return err
 			}
-			return err
+			return errors.Wrap(err, "Failed to newCephConn() ")
 		}
 		defer conn.Shutdown()
 
@@ -248,12 +248,13 @@ func (a *BlockStorageAgent) syncCephBlockStorage(bs *system.BlockStorage) error 
 			if err := a.setStateError(bs); err != nil {
 				return err
 			}
-			return err
+			return errors.Wrap(err, "Failed to open ceph pool ")
 		}
 		defer ioctx.Destroy()
 
 		// imageEntityがlocalにある場合
 		if imageEntity.Spec.Type == "Local" || imageEntity.Spec.Type == "" {
+			log.Printf("Create ceph image from local image %s %s", bs.Spec.From.BaseImage.ImageName, bs.Spec.From.BaseImage.Tag)
 			srcDirPath := filepath.Join(a.localImageDirectory, bs.Group)
 			if !fileIsExists(srcDirPath) {
 				if err := os.MkdirAll(srcDirPath, 0755); err != nil {
@@ -269,6 +270,7 @@ func (a *BlockStorageAgent) syncCephBlockStorage(bs *system.BlockStorage) error 
 			// localになかったら別のノードから持ってくる
 			// TODO: agent_localでも使っているので関数にする
 			if !fileIsExists(srcPath) {
+				log.Printf("fetch local image %s %s from another node", bs.Spec.From.BaseImage.ImageName, bs.Spec.From.BaseImage.Tag)
 				err := func() error {
 					src, err := os.Create(srcPath)
 					if err != nil {
@@ -278,7 +280,7 @@ func (a *BlockStorageAgent) syncCephBlockStorage(bs *system.BlockStorage) error 
 
 					stream, _, err := a.client.SystemV0().Image().Download(bs.Group, bs.Spec.From.BaseImage.ImageName, bs.Spec.From.BaseImage.Tag)
 					if err != nil {
-						return err
+						return errors.Wrap(err, "Failed to download remote image")
 					}
 					defer stream.Close()
 
@@ -313,6 +315,7 @@ func (a *BlockStorageAgent) syncCephBlockStorage(bs *system.BlockStorage) error 
 			}
 
 			cephImage, err := rbd.Create(ioctx, imageNameWithGroupAndNS, size, 22)
+			log.Printf("Init ceph rbd %s", imageNameWithGroupAndNS)
 			if err != nil {
 				if err := a.setStateError(bs); err != nil {
 					return err
@@ -329,6 +332,7 @@ func (a *BlockStorageAgent) syncCephBlockStorage(bs *system.BlockStorage) error 
 			}
 
 			// BaseImageのデータをcephのimageに書き込む
+			log.Printf("Upload image to ceph rbd %s", imageNameWithGroupAndNS)
 			if finfo, err := src.Stat(); err == nil {
 				_, err = io.CopyN(cephImage, src, finfo.Size())
 			} else {
