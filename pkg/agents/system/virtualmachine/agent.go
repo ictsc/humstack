@@ -337,9 +337,11 @@ func (a *VirtualMachineAgent) powerOnVirtualMachine(
 				return fmt.Errorf("BlockStorage is not active")
 			}
 
+			namespace := ""
 			disks = append(disks,
 				"-drive",
-				fmt.Sprintf("file=rbd:%s,format=qcow2", filepath.Join(cephPoolName, cephImageName)),
+				fmt.Sprintf("file=rbd:%s/%s/%s,format=qcow2", cephPoolName, namespace, cephImageName),
+
 			)
 		} else { // Cephでない場合はLocalになる
 			disks = append(disks,

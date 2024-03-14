@@ -231,11 +231,11 @@ func (a *BlockStorageAgent) Run(pollingDuration time.Duration) {
 								}
 
 								if isUsed {
-									a.logger.Info(
-										"skip bs is used",
-										zap.String("bs", bs.Namespace+"/"+bs.ID),
-										zap.Time("time", time.Now()),
-									)
+									//a.logger.Info(
+									//	"skip bs is used",
+									//	zap.String("bs", bs.Namespace+"/"+bs.ID),
+									//	zap.Time("time", time.Now()),
+									//)
 									return
 								}
 							}

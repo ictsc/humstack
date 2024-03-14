@@ -192,19 +192,19 @@ func (a *BlockStorageAgent) syncCephBlockStorage(bs *system.BlockStorage) error 
 		}
 
 		// リサイズ
-		imageNameFull := filepath.Join(a.config.CephBackend.PoolName, imageNameWithGroupAndNS)
+		namespace := ""
 		command := "qemu-img"
 		args := []string{
 			"resize",
-			fmt.Sprintf("rbd:%s", imageNameFull),
+			fmt.Sprintf("rbd:%s/%s/%s", a.config.CephBackend.PoolName, namespace, imageNameWithGroupAndNS),
 			withUnitToWithoutUnit(bs.Spec.LimitSize),
 		}
 		cmd := exec.Command(command, args...)
-		if _, err := cmd.CombinedOutput(); err != nil {
+		if stdoutstderr, err := cmd.CombinedOutput(); err != nil {
 			if err := a.setStateError(bs); err != nil {
 				return err
 			}
-			return err
+			return errors.Wrap(err, fmt.Sprintf("qemu-img %s :%s", strings.Join(args, " "), stdoutstderr) );
 		}
 
 	case system.BlockStorageFromTypeBaseImage:
@@ -342,19 +342,19 @@ func (a *BlockStorageAgent) syncCephBlockStorage(bs *system.BlockStorage) error 
 			}
 
 			// リサイズ
-			imageNameFull := filepath.Join(a.config.CephBackend.PoolName, imageNameWithGroupAndNS)
+			namespace := ""
 			command := "qemu-img"
 			args := []string{
 				"resize",
-				fmt.Sprintf("rbd:%s", imageNameFull),
+				fmt.Sprintf("rbd:%s/%s/%s", a.config.CephBackend.PoolName, namespace, imageNameWithGroupAndNS),
 				withUnitToWithoutUnit(bs.Spec.LimitSize),
 			}
 			cmd := exec.Command(command, args...)
-			if _, err := cmd.CombinedOutput(); err != nil {
+			if stdoutstderr, err := cmd.CombinedOutput(); err != nil {
 				if err := a.setStateError(bs); err != nil {
 					return err
 				}
-				return err
+				return errors.Wrap(err, fmt.Sprintf("qemu-img %s :%s", strings.Join(args, " "), stdoutstderr) );
 			}
 		} else if imageEntity.Spec.Type == "Ceph" {
 			snapName := imageEntity.Annotations["imageentityv0/ceph-snapname"]
@@ -384,19 +384,19 @@ func (a *BlockStorageAgent) syncCephBlockStorage(bs *system.BlockStorage) error 
 				}
 			}
 			// ceph image内のqcow2リサイズ
-			imageNameFull := filepath.Join(a.config.CephBackend.PoolName, imageNameWithGroupAndNS)
+			namespace := ""
 			command := "qemu-img"
 			args := []string{
 				"resize",
-				fmt.Sprintf("rbd:%s", imageNameFull),
+				fmt.Sprintf("rbd:%s/%s/%s", a.config.CephBackend.PoolName, namespace, imageNameWithGroupAndNS),
 				withUnitToWithoutUnit(bs.Spec.LimitSize),
 			}
 			cmd := exec.Command(command, args...)
-			if _, err := cmd.CombinedOutput(); err != nil {
+			if stdoutstderr, err := cmd.CombinedOutput(); err != nil {
 				if err := a.setStateError(bs); err != nil {
 					return errors.Wrapf(err, "Failed to exec `%s %s` but cannot update state", command, strings.Join(args, " "))
 				}
-				return errors.Wrapf(err, "Failed to exec `%s %s`", command, strings.Join(args, " "))
+				return errors.Wrap(err, fmt.Sprintf("qemu-img %s :%s", strings.Join(args, " "), stdoutstderr) );
 			}
 
 		}
