@@ -4,7 +4,7 @@ import (
 	"crypto/md5"
 	"encoding/json"
 	"fmt"
-	"log"
+	//"log"
 	"time"
 
 	"github.com/ophum/humstack/pkg/api/core"
