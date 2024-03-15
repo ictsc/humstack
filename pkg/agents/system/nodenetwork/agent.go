@@ -165,7 +165,7 @@ func (a *NodeNetworkAgent) Run(pollingDuration time.Duration) {
 							err = a.syncVLANNetwork(net)
 							if err != nil {
 								a.logger.Error(
-									"sync vlan network",
+									fmt.Sprintf("sync vlan network %s ", net.Name),
 									zap.String("msg", err.Error()),
 									zap.Time("time", time.Now()),
 								)

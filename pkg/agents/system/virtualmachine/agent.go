@@ -189,7 +189,7 @@ func (a *VirtualMachineAgent) Run(pollingDuration time.Duration) {
 						err = a.syncVirtualMachine(vm, bsMap, netMap, nodeNetMap)
 						if err != nil {
 							a.logger.Error(
-								"sync virtualmachine",
+								fmt.Sprintf("sync virtualmachine %s ", vm.Name),
 								zap.String("msg", err.Error()),
 								zap.Time("time", time.Now()),
 							)

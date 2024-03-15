@@ -72,7 +72,7 @@ func (a *NetworkAgent) Run(pollingDuration time.Duration) {
 						err = a.syncNetwork(net)
 						if err != nil {
 							a.logger.Error(
-								"sync bridge network",
+								fmt.Sprintf("sync bridge network %s ", net.Name),
 								zap.String("msg", err.Error()),
 								zap.Time("time", time.Now()),
 							)
@@ -119,7 +119,7 @@ func (a *NetworkAgent) syncNetwork(net *core.Network) error {
 		for _, node := range nodeList {
 			nodeNet, ok := nodeNetMap[getNodeNetworkID(net.ID, node.ID)]
 			if !ok {
-				log.Println("already deleted")
+				// log.Println("already deleted")
 				if err := a.client.CoreV0().Network().Delete(net.Group, net.Namespace, net.ID); err != nil {
 					return errors.Wrap(err, "delete network")
 				}
