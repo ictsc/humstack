@@ -249,7 +249,7 @@ func (a *BlockStorageAgent) Run(pollingDuration time.Duration) {
 								err = a.syncLocalBlockStorage(bs)
 								if err != nil {
 									a.logger.Error(
-										"sync local blockstorage",
+										fmt.Sprintf("sync local blockstorage %s ", bs.Name),
 										zap.String("msg", err.Error()),
 										zap.Time("time", time.Now()),
 									)
@@ -264,7 +264,7 @@ func (a *BlockStorageAgent) Run(pollingDuration time.Duration) {
 								err = a.syncCephBlockStorage(bs)
 								if err != nil {
 									a.logger.Error(
-										"sync ceph blockstorage",
+										fmt.Sprintf("sync ceph blockstorage %s ", bs.Name),
 										zap.String("msg", err.Error()),
 										zap.Time("time", time.Now()),
 									)
@@ -285,7 +285,7 @@ func (a *BlockStorageAgent) Run(pollingDuration time.Duration) {
 								)
 								return
 							}
-							a.logger.Info("sync because different hash",
+							a.logger.Info(fmt.Sprintf("synced blockstorage %s from %s ", bs.Name, bs.Annotations[BlockStorageV0AnnotationNodeName]),
 								zap.String("bs", bs.Namespace+"/"+bs.ID),
 								zap.Time("time", time.Now()),
 							)

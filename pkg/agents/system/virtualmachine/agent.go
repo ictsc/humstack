@@ -189,7 +189,7 @@ func (a *VirtualMachineAgent) Run(pollingDuration time.Duration) {
 						err = a.syncVirtualMachine(vm, bsMap, netMap, nodeNetMap)
 						if err != nil {
 							a.logger.Error(
-								fmt.Sprintf("sync virtualmachine %s ", vm.Name),
+								fmt.Sprintf("sync virtualmachine %s failed ", vm.Name),
 								zap.String("msg", err.Error()),
 								zap.Time("time", time.Now()),
 							)
@@ -315,12 +315,12 @@ func (a *VirtualMachineAgent) powerOnVirtualMachine(
 	for _, bsID := range vm.Spec.BlockStorageIDs {
 		bs, ok := bsMap[bsID]
 		if !ok {
-			return fmt.Errorf("BlockStorage is not found")
+			return fmt.Errorf("BlockStorage %s is not found", bsID)
 		}
 
 		if bs.Status.State != system.BlockStorageStateActive {
 			vm.Status.State = system.VirtualMachineStatePending
-			return fmt.Errorf("BlockStorage is not active")
+			return fmt.Errorf("BlockStorage %s is not active", bsID)
 		}
 
 		// bsのtypeがCephの場合
@@ -328,13 +328,13 @@ func (a *VirtualMachineAgent) powerOnVirtualMachine(
 			cephPoolName, ok := bs.Annotations["ceph-pool-name"]
 			if !ok {
 				vm.Status.State = system.VirtualMachineStatePending
-				return fmt.Errorf("BlockStorage is not active")
+				return fmt.Errorf("Ceph rbd %s is not active", bsID)
 			}
 
 			cephImageName, ok := bs.Annotations["ceph-image-name"]
 			if !ok {
 				vm.Status.State = system.VirtualMachineStatePending
-				return fmt.Errorf("BlockStorage is not active")
+				return fmt.Errorf("Ceph rbd %s is not active", bsID)
 			}
 
 			namespace := ""

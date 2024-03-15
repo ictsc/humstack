@@ -26,7 +26,7 @@ func (a *NodeNetworkAgent) syncVLANNetwork(network *system.NodeNetwork) error {
 	vlanLink, err := netlink.LinkByName(vlanName)
 	if err != nil {
 		if err.Error() != "Link not found" {
-			return err
+			return errors.Wrap(err, fmt.Sprintf("Failed to check existing vlan bridge using %s", vlanName))
 		}
 	}
 	if err == nil {
@@ -34,7 +34,7 @@ func (a *NodeNetworkAgent) syncVLANNetwork(network *system.NodeNetwork) error {
 		attachedBr, err := netlink.LinkByIndex(index)
 		if err != nil {
 			if err.Error() != "Link not found" {
-				return err
+				return errors.Wrap(err, fmt.Sprintf("Failed to check existing vlan bridge member for %s : %d ", vlanName, index))
 			}
 		} else {
 			if bridgeName != attachedBr.Attrs().Name {
@@ -45,7 +45,7 @@ func (a *NodeNetworkAgent) syncVLANNetwork(network *system.NodeNetwork) error {
 					Log:      fmt.Sprintf("vlan id `%s` is already used.", network.Spec.ID),
 				})
 				if _, err := a.client.SystemV0().NodeNetwork().Update(network); err != nil {
-					return err
+					return errors.Wrap(err, fmt.Sprintf("Failed to Update nodenetwork api %s ", network.Name))
 				}
 				return fmt.Errorf("vlan id `%s` is already used.", network.Spec.ID)
 			}
@@ -55,26 +55,26 @@ func (a *NodeNetworkAgent) syncVLANNetwork(network *system.NodeNetwork) error {
 	// 作成だけ
 	_, err = iproute2.NewBridge(bridgeName)
 	if err != nil {
-		return err
+		return errors.Wrap(err, fmt.Sprintf("Failed to create vlan bridge %s",bridgeName))
 	}
 
 	id, err := strconv.ParseInt(network.Spec.ID, 10, 64)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "Failed to ParseInt() ")
 	}
 	dev, err := netlink.LinkByName(a.config.VLAN.DevName)
 	if err != nil {
-		return err
+		return errors.Wrap(err, fmt.Sprintf("Failed to find interface %s ", a.config.VLAN.DevName))
 	}
 
 	vlan, err := vlan.NewVlan(dev, vlanName, int(id))
 	if err != nil {
-		return err
+		return errors.Wrap(err, fmt.Sprintf("Failed to split vlan %s interface %s", vlanName, dev))
 	}
 
 	br, err := netlink.LinkByName(bridgeName)
 	if err != nil {
-		return err
+		return errors.Wrap(err, fmt.Sprintf("Failed to find bridge %s ", bridgeName))
 	}
 
 	// 削除処理
@@ -94,7 +94,7 @@ func (a *NodeNetworkAgent) syncVLANNetwork(network *system.NodeNetwork) error {
 
 	err = vlan.SetMaster(br)
 	if err != nil {
-		return err
+		return errors.Wrap(err, fmt.Sprintf("Failed to set master bridge %s ", br))
 	}
 
 	network.Annotations[NetworkV0AnnotationBridgeName] = bridgeName
